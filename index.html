@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Sihirli Animasyon Studio - Basit Laptop Modu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@900&family=Orbitron:wght@900&family=Poppins:wght@400;600;800;900&family=Press+Start+2P&family=Pacifico&display=swap" rel="stylesheet">
+    
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background: #020205;
+            font-family: 'Poppins', sans-serif;
+            touch-action: none; user-select: none;
+        }
+
+        #canvas1 {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh; z-index: 1; display: block;
+        }
+
+        .glass-panel {
+            background: rgba(10, 15, 30, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.8);
+        }
+
+        .tool-btn {
+            transition: all 0.2s ease;
+        }
+        .tool-btn:active { transform: scale(0.95); }
+
+        .active-font {
+            background: #3b82f6;
+            border-color: #93c5fd;
+            color: white !important;
+            font-weight: 800;
+        }
+        
+        .active-theme {
+            border-color: #fff !important;
+            transform: scale(1.1);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { height: 3px; width: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 5px; }
+    </style>
+</head>
+<body class="text-white min-h-screen">
+
+    <canvas id="canvas1"></canvas>
+
+    <header class="fixed top-2 left-1/2 transform -translate-x-1/2 z-20 w-[96%] max-w-4xl glass-panel rounded-xl p-2 flex flex-col gap-1.5">
+        
+        <!-- ÜST BÖLÜM -->
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-1.5 px-1">
+            <div class="flex items-center gap-2">
+                <span class="text-xs md:text-sm font-black text-cyan-400 font-['Montserrat'] tracking-wider">
+                    BASİT LAPTOP MODU (OKUNUR & HIZLI)
+                </span>
+            </div>
+
+            <!-- Bilgi -->
+            <div class="hidden sm:flex px-2.5 py-0.5 rounded bg-white/5 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
+                <span>KLAVYEDEN YAZIN (ÜSTLER NORMAL, EN ALT PARÇACIK)</span>
+            </div>
+
+            <!-- Renk Temaları -->
+            <div class="flex items-center gap-1.5 bg-black/40 p-1 rounded-lg border border-white/5">
+                <button data-theme="NEON" class="theme-btn w-4 h-4 rounded-full bg-cyan-400 border border-transparent active-theme" title="Neon"></button>
+                <button data-theme="FIRE" class="theme-btn w-4 h-4 rounded-full bg-red-500 border border-transparent" title="Ateş"></button>
+                <button data-theme="ICE" class="theme-btn w-4 h-4 rounded-full bg-blue-300 border border-transparent" title="Buz"></button>
+                <button data-theme="MATRIX" class="theme-btn w-4 h-4 rounded-full bg-green-400 border border-transparent" title="Matrix"></button>
+            </div>
+        </div>
+
+        <!-- ALT BÖLÜM: Stiller ve Şekiller -->
+        <div class="flex flex-wrap items-center justify-between gap-2 text-xs px-1">
+            
+            <!-- Yazı Stilleri -->
+            <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5">
+                <button data-font="MONTSERRAT" class="font-btn tool-btn active-font px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-200">Modern</button>
+                <button data-font="ORBITRON" class="font-btn tool-btn px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-200 font-['Orbitron']">Siber</button>
+                <button data-font="PACIFICO" class="font-btn tool-btn px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-200 font-['Pacifico']">El Yazısı</button>
+                <button data-font="PIXEL" class="font-btn tool-btn px-2 py-0.5 rounded bg-white/5 border border-white/10 text-slate-200 font-['Press_Start_2P'] text-[8px]">Pixel</button>
+            </div>
+
+            <!-- Sihirli Şekiller -->
+            <div class="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5">
+                <button data-shape="HEART" class="shape-btn tool-btn px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300">❤️ Kalp</button>
+                <button data-shape="INFINITY" class="shape-btn tool-btn px-2 py-0.5 rounded bg-purple-500/20 border border-purple-500/40 text-purple-300">♾️ Sonsuzluk</button>
+                <button data-shape="STAR" class="shape-btn tool-btn px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300">⭐ Yıldız</button>
+            </div>
+        </div>
+    </header>
+
+    <script>
+        const canvas = document.getElementById('canvas1');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false });
+
+        let particles = [];
+        const MAX_PARTICLES = 1200; // Okunurluk ve yoğunluk artırıldı
+        const pixelStep = 2; // Çok daha sık örnekleme ile harflerin net çıkması sağlandı
+
+        let currentMode = 'TEXT';
+        let currentShape = 'HEART';
+        let currentFontKey = 'MONTSERRAT';
+        let currentThemeKey = 'NEON';
+        
+        let typedTextLines = ["BASIT", "MOD"];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            if (currentMode === 'TEXT') createTextParticles();
+        });
+        resizeCanvas();
+
+        const THEMES = {
+            NEON: [{r:6, g:182, b:212}, {r:59, g:130, b:246}, {r:139, g:92, b:246}],
+            FIRE: [{r:250, g:204, b:21}, {r:249, g:115, b:22}, {r:239, g:68, b:68}],
+            ICE: [{r:224, g:242, b:254}, {r:186, g:230, b:253}, {r:56, g:189, b:248}],
+            MATRIX: [{r:134, g:239, b:172}, {r:74, g:222, b:128}, {r:34, g:197, b:94}]
+        };
+
+        const FONTS = {
+            MONTSERRAT: { font: "'Montserrat', sans-serif", weight: '900', sizeMult: 1.0 },
+            ORBITRON: { font: "'Orbitron', sans-serif", weight: '900', sizeMult: 0.85 },
+            PACIFICO: { font: "'Pacifico', cursive", weight: '400', sizeMult: 1.0 },
+            PIXEL: { font: "'Press Start 2P', cursive", weight: '400', sizeMult: 0.5 }
+        };
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.targetX = x;
+                this.targetY = y;
+                this.color = color;
+            }
+
+            update() {
+                this.x += (this.targetX - this.x) * 0.4;
+                this.y += (this.targetY - this.y) * 0.4;
+            }
+
+            draw() {
+                ctx.fillStyle = `rgb(${this.color.r}, ${this.color.g}, ${this.color.b})`;
+                // Okunur ve net parçacık kareleri (3x3 piksel)
+                ctx.fillRect(this.x, this.y, 3, 3);
+            }
+        }
+
+        function createTextParticles() {
+            if (!canvas.width || currentMode !== 'TEXT') return;
+            
+            let lines = typedTextLines.slice();
+            if(lines.length === 0) lines = ['YAZIN'];
+
+            const fontCfg = FONTS[currentFontKey];
+            let maxLen = Math.max(...lines.map(l => l.length || 1));
+            
+            let fontSize = Math.min(canvas.width / (maxLen * 0.7), 65) * fontCfg.sizeMult;
+            fontSize = Math.max(24, Math.min(fontSize, 75));
+            
+            let latestLine = lines[lines.length - 1] || "";
+            if (!latestLine) {
+                particles = [];
+                return;
+            }
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = Math.floor(canvas.width);
+            tempCanvas.height = Math.floor(canvas.height);
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+
+            const lineHeight = fontSize * 1.3;
+            // Yazının ortadan aşağı inmemesi için yukarı yönlü sabit baz konumlandırma
+            const startY = (canvas.height * 0.4) - ((lines.length * lineHeight) / 2) + (fontSize / 2);
+            const latestLineY = startY + ((lines.length - 1) * lineHeight);
+
+            tempCtx.font = `${fontCfg.weight} ${fontSize}px ${fontCfg.font}`;
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.textAlign = 'center';
+            tempCtx.textBaseline = 'middle';
+            tempCtx.fillText(latestLine, tempCanvas.width / 2, latestLineY);
+
+            const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height).data;
+            const coords = [];
+
+            for (let y = 0; y < tempCanvas.height; y += pixelStep) {
+                for (let x = 0; x < tempCanvas.width; x += pixelStep) {
+                    const idx = (y * tempCanvas.width + x) * 4;
+                    if (imgData[idx + 3] > 100) {
+                        coords.push({ x: x, y: y });
+                    }
+                }
+            }
+
+            assignTextTargets(coords);
+        }
+
+        function assignTextTargets(coords) {
+            if (coords.length === 0) {
+                particles = [];
+                return;
+            }
+
+            const targetCount = Math.min(coords.length, MAX_PARTICLES);
+            const palette = THEMES[currentThemeKey];
+
+            while(particles.length < targetCount) {
+                particles.push(new Particle(canvas.width/2, canvas.height/2, palette[0]));
+            }
+            if (particles.length > targetCount) {
+                particles.length = targetCount;
+            }
+
+            const stepRatio = coords.length / targetCount;
+
+            for (let i = 0; i < particles.length; i++) {
+                const sampleIdx = Math.floor(i * stepRatio);
+                const pt = coords[Math.min(sampleIdx, coords.length - 1)];
+                const p = particles[i];
+                
+                p.targetX = pt.x;
+                p.targetY = pt.y;
+                p.color = palette[i % palette.length];
+            }
+        }
+
+        function calculateShapeTargets(shape) {
+            const palette = THEMES[currentThemeKey];
+            const targetCount = MAX_PARTICLES;
+
+            while(particles.length < targetCount) {
+                particles.push(new Particle(canvas.width/2, canvas.height/2, palette[0]));
+            }
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = Math.min(canvas.width, canvas.height) * 0.3;
+
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                const t = (i / particles.length) * Math.PI * 2;
+                let tx = cx, ty = cy;
+
+                if (shape === 'HEART') {
+                    let hx = 16 * Math.pow(Math.sin(t), 3);
+                    let hy = -(13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t));
+                    tx = cx + hx * (scale / 16);
+                    ty = cy + hy * (scale / 16);
+                } else if (shape === 'INFINITY') {
+                    let scaleInf = scale * 1.3;
+                    let sinT = Math.sin(t);
+                    let cosT = Math.cos(t);
+                    let denom = 1 + sinT * sinT;
+                    tx = cx + (scaleInf * cosT) / denom;
+                    ty = cy + (scaleInf * sinT * cosT) / denom;
+                } else if (shape === 'STAR') {
+                    let r = scale * (0.6 + 0.4 * Math.sin(t * 5));
+                    tx = cx + Math.cos(t) * r * 1.1;
+                    ty = cy + Math.sin(t) * r * 1.1;
+                }
+
+                p.targetX = tx;
+                p.targetY = ty;
+                p.color = palette[i % palette.length];
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace') {
+                if (typedTextLines.length > 0) {
+                    let lastIdx = typedTextLines.length - 1;
+                    typedTextLines[lastIdx] = typedTextLines[lastIdx].slice(0, -1);
+                    if (typedTextLines[lastIdx].length === 0 && typedTextLines.length > 1) {
+                        typedTextLines.pop();
+                    }
+                }
+            } else if (e.key === 'Enter') {
+                typedTextLines.push("");
+                if (typedTextLines.length > 5) {
+                    typedTextLines.shift();
+                }
+            } else if (e.key.length === 1) {
+                if (currentMode !== 'TEXT') {
+                    currentMode = 'TEXT';
+                    document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active-font'));
+                }
+                let currentLineIdx = typedTextLines.length - 1;
+                if (currentLineIdx < 0) {
+                    typedTextLines.push("");
+                    currentLineIdx = 0;
+                }
+                typedTextLines[currentLineIdx] += e.key.toUpperCase();
+                
+                if (typedTextLines[currentLineIdx].length > 14) {
+                    let lastWord = typedTextLines[currentLineIdx];
+                    typedTextLines[currentLineIdx] = lastWord.slice(0, 14);
+                    typedTextLines.push(lastWord.slice(14));
+                    if (typedTextLines.length > 5) typedTextLines.shift();
+                }
+            }
+            if (currentMode === 'TEXT') {
+                createTextParticles();
+            }
+        });
+
+        document.querySelectorAll('.font-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('active-font'));
+                e.target.classList.add('active-font');
+                currentFontKey = e.target.getAttribute('data-font');
+                currentMode = 'TEXT';
+                createTextParticles();
+            });
+        });
+
+        document.querySelectorAll('.shape-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentShape = e.target.getAttribute('data-shape');
+                currentMode = 'SHAPE';
+            });
+        });
+
+        document.querySelectorAll('.theme-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active-theme'));
+                e.currentTarget.classList.add('active-theme');
+                currentThemeKey = e.currentTarget.getAttribute('data-theme');
+                if (currentMode === 'TEXT') createTextParticles();
+            });
+        });
+
+        function animate() {
+            ctx.fillStyle = '#020205'; 
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (currentMode === 'SHAPE') {
+                calculateShapeTargets(currentShape);
+            } else {
+                let lines = typedTextLines.slice();
+                if (lines.length > 0) {
+                    const fontCfg = FONTS[currentFontKey];
+                    let maxLen = Math.max(...lines.map(l => l.length || 1));
+                    let fontSize = Math.min(canvas.width / (maxLen * 0.7), 65) * fontCfg.sizeMult;
+                    fontSize = Math.max(24, Math.min(fontSize, 75));
+                    const lineHeight = fontSize * 1.3;
+                    const startY = (canvas.height * 0.4) - ((lines.length * lineHeight) / 2) + (fontSize / 2);
+
+                    ctx.save();
+                    ctx.font = `${fontCfg.weight} ${fontSize}px ${fontCfg.font}`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    const palette = THEMES[currentThemeKey];
+
+                    // Üstteki eski satırlar sabit ve net normal yazı olarak çizilir
+                    for (let i = 0; i < lines.length - 1; i++) {
+                        let line = lines[i];
+                        if (line) {
+                            let yPos = startY + (i * lineHeight);
+                            let color = palette[i % palette.length];
+                            
+                            ctx.fillStyle = `rgb(${color.r}, ${color.g}, ${color.b})`;
+                            ctx.fillText(line, canvas.width / 2, yPos);
+                        }
+                    }
+                    ctx.restore();
+                }
+            }
+
+            // En alttaki yeni satır parçacıklarla çizilir
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        document.fonts.ready.then(() => {
+            resizeCanvas();
+            createTextParticles();
+            animate();
+        });
+    </script>
+</body>
+</html>
